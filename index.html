@@ -1,0 +1,1367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Datadog for PowerUp Money</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232b1259'/%3E%3Crect x='12' y='16' width='40' height='7' rx='2' fill='%237fd8ff'/%3E%3Crect x='18' y='29' width='34' height='7' rx='2' fill='%237fd8ff' opacity='.75'/%3E%3Crect x='24' y='42' width='18' height='7' rx='2' fill='%23ff6b6b'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen mission console. Every view is budgeted to fit a 1000 x 540 laptop viewport without page scroll.
+   A light header and mission rail frame a deep purple stage. Every mission shares one head (kicker, title, brief, progress pill)
+   and one two-column body, so pages line up with each other. Type scales with the shorter of viewport width and height. */
+:root {
+  --paper: #eef0f3;
+  --card: #ffffff;
+  --ink: #15121c;
+  --muted: #5d586a;
+  --rule: #d9d7e0;
+  --brand: #632ca6;
+  --brand-ink: #ffffff;
+  --stage: #2b1259;
+  --stage-2: #361a6c;
+  --stage-3: #44277f;
+  --stage-line: #523693;
+  --stage-grid: #321766;
+  --stage-ink: #f5f1ff;
+  --stage-muted: #c0b3e3;
+  --ok: #41d39a;
+  --warn: #ffb84d;
+  --bad: #ff6b6b;
+  --span: #7fd8ff;
+  --phone: #0e0c13;
+  --screen: #fbfaf8;
+  --screen-ink: #1a1720;
+  --screen-muted: #6d6878;
+  --screen-rule: #ebe8ee;
+  --screen-ok: #1f9d6a;
+  --screen-veil: rgba(16, 14, 22, .32);
+  --veil: rgba(14, 8, 28, .66);
+  --shadow: 0 30px 50px -26px rgba(8, 2, 24, .8);
+
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Type scale, sized by the tighter of width and height */
+  --t-hero: clamp(28px, min(3.3vw, 6.2vh), 50px);
+  --t-title: clamp(20px, min(2vw, 4vh), 28px);
+  --t-card: clamp(15px, min(1.25vw, 2.6vh), 18px);
+  --t-body: clamp(13px, min(1vw, 2.3vh), 15px);
+  --t-small: 12px;
+  --t-mono: 11px;
+
+  /* Spacing scale */
+  --s-1: clamp(4px, .8vh, 6px);
+  --s-2: clamp(8px, 1.4vh, 12px);
+  --s-3: clamp(12px, 2.2vh, 18px);
+  --s-4: clamp(16px, 3vh, 26px);
+  --gutter: clamp(16px, 2.4vw, 32px);
+  --panel-pad: clamp(12px, 2vh, 20px) clamp(14px, 1.6vw, 20px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #100e15; --card: #1a1721; --ink: #eeebf4; --muted: #a39db2; --rule: #2a2633;
+    --brand: #a98ae6; --brand-ink: #130b20;
+    --stage: #221048; --stage-2: #2d175c; --stage-3: #3b2374; --stage-line: #4a3287; --stage-grid: #271352;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #100e15; --card: #1a1721; --ink: #eeebf4; --muted: #a39db2; --rule: #2a2633;
+  --brand: #a98ae6; --brand-ink: #130b20;
+  --stage: #221048; --stage-2: #2d175c; --stage-3: #3b2374; --stage-line: #4a3287; --stage-grid: #271352;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: var(--t-body)/1.5 var(--body);
+  -webkit-font-smoothing: antialiased;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--paper); }
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--span); outline-offset: 2px; }
+h2, h3, h4, p { margin: 0; }
+
+/* ---------- Header ---------- */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  display: flex; align-items: center; gap: 16px;
+  padding-block: 8px;
+  padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  min-height: 48px;
+}
+.brand { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: 14px; text-decoration: none; white-space: nowrap; }
+.brand .x { color: var(--muted); font-weight: 400; margin-inline: 6px; }
+.meter { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.segs { display: flex; gap: 3px; }
+.segs i { display: block; width: 18px; height: 6px; background: var(--rule); transition: background .4s; }
+.segs i.on { background: var(--brand); }
+.meter-label, .xp { font-family: var(--data); font-size: var(--t-mono); color: var(--muted); white-space: nowrap; }
+.xp { display: flex; align-items: baseline; gap: 6px; }
+.xp b { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+.xp .rank { padding-left: 6px; border-left: 1px solid var(--rule); }
+.xp.bump b { animation: bump .5s; }
+.medal-chip { font-family: var(--data); font-size: 10.5px; padding: 3px 7px; background: var(--ink); color: var(--paper); white-space: nowrap; }
+.plan-btn { border: 1px solid var(--ink); background: transparent; padding: 6px 12px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.plan-btn[aria-current="page"] { background: var(--ink); color: var(--paper); }
+
+/* ---------- Console ---------- */
+.console { display: grid; grid-template-columns: clamp(200px, 20vw, 248px) minmax(0, 1fr); min-height: 0; }
+.rail { border-right: 1px solid var(--rule); padding: var(--s-4) 12px var(--s-3) var(--gutter); display: flex; flex-direction: column; gap: 2px; overflow: auto; }
+.hello { font-size: 12.5px; line-height: 1.45; color: var(--muted); margin-bottom: var(--s-3); padding-right: 6px; }
+.hello strong { display: block; font-family: var(--display); font-stretch: 118%; font-weight: 800; font-size: 17px; line-height: 1.15; color: var(--ink); margin-bottom: 4px; }
+.mission { display: grid; grid-template-columns: 12px minmax(0, 1fr); column-gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; padding: var(--s-1) 8px var(--s-1) 10px; cursor: pointer; }
+.mission:hover { background: var(--card); }
+.mission .dot { grid-row: span 2; width: 10px; height: 10px; border: 2px solid var(--muted); border-radius: 50%; margin-top: 5px; }
+.mission.done .dot { background: var(--screen-ok); border-color: var(--screen-ok); }
+.mission[aria-current="page"] { border-left-color: var(--brand); background: var(--card); }
+.m-name { font-weight: 700; font-size: 13.5px; line-height: 1.3; }
+.m-meta { font-family: var(--data); font-size: 10.5px; color: var(--muted); }
+.rail-foot { margin-top: auto; padding-top: var(--s-3); display: flex; gap: 14px; }
+.link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; color: var(--muted); font-size: 12px; }
+
+.stage {
+  background-color: var(--stage);
+  background-image: linear-gradient(var(--stage-grid) 1px, transparent 1px), linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
+  background-size: 36px 36px;
+  color: var(--stage-ink);
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ---------- Shared scene frame ---------- */
+.scene {
+  height: 100%;
+  max-width: 1180px; margin-inline: auto;
+  display: flex; flex-direction: column; gap: var(--s-4);
+  padding: var(--s-4) var(--gutter);
+  animation: enter .4s both;
+}
+.scene-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; row-gap: 4px; align-items: end; flex: none; }
+.kicker { grid-column: 1 / -1; font-family: var(--data); font-size: var(--t-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.kicker .demo { color: var(--warn); }
+.scene h2 { grid-column: 1; font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: var(--t-title); line-height: 1.1; letter-spacing: -.01em; text-wrap: balance; }
+.brief { grid-column: 1; color: var(--stage-muted); max-width: 62ch; }
+.pill { grid-column: 2; grid-row: 2 / 4; align-self: end; font-family: var(--data); font-size: var(--t-mono); color: var(--span); border: 1px solid var(--stage-line); padding: 6px 10px; white-space: nowrap; }
+.scene-body { flex: 1 1 auto; min-height: 0; }
+.split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: var(--s-3); height: 100%; }
+
+.panel { background: var(--stage-2); border: 1px solid var(--stage-line); padding: var(--panel-pad); display: flex; flex-direction: column; gap: var(--s-2); min-height: 0; overflow: auto; }
+.label { font-family: var(--data); font-size: var(--t-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--stage-muted); }
+.label.ok { color: var(--ok); }
+.label.bad { color: var(--bad); }
+.panel h3 { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: var(--t-card); line-height: 1.22; text-wrap: balance; }
+.panel p { color: var(--stage-muted); line-height: 1.5; }
+.panel p a { color: var(--stage-ink); font-weight: 700; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: var(--s-1); }
+.btn-primary, .btn-secondary { font-weight: 700; font-size: 13px; padding: 9px 14px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.btn-primary { background: var(--stage-ink); color: var(--stage); border: 1px solid var(--stage-ink); }
+.btn-primary:hover { background: var(--span); border-color: var(--span); }
+.btn-secondary { background: transparent; color: var(--stage-ink); border: 1px solid var(--stage-line); }
+.btn-secondary:hover { border-color: var(--stage-muted); }
+.stats { display: flex; gap: 4px 18px; flex-wrap: wrap; font-family: var(--data); font-size: var(--t-small); color: var(--stage-ink); }
+
+/* Scoreboard list used by missions 4 and 6 */
+.board-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.board-list li { border-bottom: 1px solid var(--stage-line); font-size: 13px; }
+.board-list li:last-child { border-bottom: 0; }
+.board-list button { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: var(--s-1) 2px; cursor: pointer; }
+.board-list button:hover { color: var(--span); }
+.board-list button:focus-visible { outline: 2px solid var(--span); outline-offset: 2px; }
+.board-list .b-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--stage-muted); }
+.board-list li.right .b-dot { background: var(--ok); border-color: var(--ok); }
+.board-list li.wrong .b-dot { background: var(--bad); border-color: var(--bad); }
+.board-list li.current { color: var(--span); }
+.board-list li.current .b-dot { border-color: var(--span); }
+.board-list .b-res { font-family: var(--data); font-size: var(--t-small); color: var(--stage-muted); }
+.score { font-family: var(--display); font-stretch: 120%; font-weight: 800; font-size: var(--t-title); line-height: 1; }
+
+/* ---------- Mission 1 ---------- */
+.split.m1 { grid-template-columns: auto minmax(0, 1fr); }
+.phone { --ph: clamp(300px, calc(100vh - 220px), 540px); height: var(--ph); width: calc(var(--ph) * .4857); background: var(--phone); border-radius: 40px; padding: 9px; box-shadow: var(--shadow); container-type: size; align-self: center; }
+.screen { position: relative; height: 100%; background: var(--screen); color: var(--screen-ink); border-radius: 31px; overflow: hidden; display: flex; flex-direction: column; }
+.island { width: 32cqw; height: 4.2cqh; border-radius: 2.1cqh; background: var(--phone); margin: 1.6cqh auto 0; flex: none; }
+.app { flex: 1; display: flex; flex-direction: column; gap: 2.2cqh; padding: 3cqh 3.6cqh 3.4cqh; min-height: 0; }
+.app-row { display: flex; justify-content: space-between; align-items: center; }
+.app-title { font-weight: 800; font-size: 2.8cqh; }
+.demo-tag { font-family: var(--data); font-size: 1.6cqh; letter-spacing: .06em; text-transform: uppercase; color: var(--screen-muted); border: 1px solid var(--screen-rule); padding: .3cqh 1cqh; }
+.app-label { font-size: 2cqh; color: var(--screen-muted); }
+.app-value { margin-top: .4cqh; font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 4.9cqh; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.app-delta { margin-top: .5cqh; font-size: 2.1cqh; color: var(--screen-ok); font-weight: 600; }
+.app-spark { width: 100%; height: 9cqh; color: var(--screen-ok); flex: none; }
+.funds { list-style: none; margin: 0; padding: 0; font-size: 2.1cqh; }
+.funds li { display: flex; justify-content: space-between; gap: 8px; padding: 1.5cqh 0; border-bottom: 1px solid var(--screen-rule); }
+.funds li span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+.sip-btn { margin-top: auto; position: relative; background: var(--screen-ink); color: var(--screen); border: 0; border-radius: 2.6cqh; padding: 2.6cqh 2cqh; font-weight: 800; font-size: 2.5cqh; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 1.4cqh; }
+.sip-btn.pulse::after { content: ""; position: absolute; inset: -5px; border-radius: 3.4cqh; border: 2px solid var(--warn); animation: ring 1.6s infinite; pointer-events: none; }
+.sip-btn.busy { cursor: progress; }
+.sip-btn.ok { background: var(--screen-ok); }
+.spin { width: 2.6cqh; height: 2.6cqh; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+.freeze { position: absolute; inset: 0; background: var(--screen-veil); display: grid; place-items: start center; padding-top: 12cqh; pointer-events: none; }
+.freeze-tag { font-family: var(--data); font-size: 2.1cqh; background: var(--bad); color: var(--screen-ink); padding: .8cqh 1.6cqh; font-weight: 600; }
+
+.inv { display: flex; flex-direction: column; gap: var(--s-2); min-height: 0; }
+.hint { font-family: var(--data); font-size: var(--t-small); color: var(--warn); display: flex; gap: 10px; align-items: center; flex: none; }
+.hint::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; }
+.hint.done { color: var(--ok); }
+.hint.done::before { animation: none; }
+.inv .panel { flex: 1; padding: 0; gap: 0; }
+.inv-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--stage-line); flex: none; }
+.inv-tab { background: none; border: 0; border-right: 1px solid var(--stage-line); padding: 10px 12px; text-align: left; font-family: var(--data); font-size: var(--t-mono); color: var(--stage-muted); cursor: pointer; }
+.inv-tab:last-child { border-right: 0; }
+.inv-tab:disabled { cursor: default; opacity: .45; }
+.inv-tab.on { color: var(--stage-ink); box-shadow: inset 0 -2px 0 var(--span); }
+.inv-tab.done { color: var(--ok); }
+.inv-view { padding: var(--panel-pad); display: flex; flex-direction: column; gap: var(--s-2); min-height: 0; overflow: auto; flex: 1; }
+.fade { animation: rise .35s both; }
+.view-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--data); font-size: var(--t-mono); color: var(--stage-muted); }
+.ghost { display: grid; gap: 10px; align-content: start; color: var(--stage-muted); }
+.ghost i { display: block; height: 8px; background: var(--stage-3); }
+.ghost i:nth-child(2) { width: 82%; } .ghost i:nth-child(3) { width: 56%; } .ghost i:nth-child(4) { width: 70%; }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.tl-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 48px; gap: 4px 10px; align-items: center; padding: var(--s-1) 8px; font-family: var(--data); font-size: var(--t-small); width: 100%; text-align: left; background: none; border: 1px solid transparent; }
+button.tl-row { cursor: pointer; }
+button.tl-row:hover { background: var(--stage-3); }
+button.tl-row.ready { border-color: var(--warn); }
+.tl-row .t { color: var(--stage-muted); font-variant-numeric: tabular-nums; }
+.tl-row .ev { overflow-wrap: anywhere; }
+.tl-row .dur { text-align: right; font-variant-numeric: tabular-nums; }
+.bad-t { color: var(--bad); }
+.tl-bar { grid-column: 2 / 4; height: 5px; background: var(--stage-3); overflow: hidden; }
+.tl-bar i { display: block; height: 100%; width: var(--w); background: var(--bad); transform-origin: left; animation: grow-x 1s cubic-bezier(.2, .7, .2, 1) both .2s; }
+.wf-scale, .span-row { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr) 46px; gap: 10px; align-items: center; }
+.wf-scale { padding: 0 8px; font-family: var(--data); font-size: 10px; color: var(--stage-muted); }
+.wf-scale span:nth-child(2) { display: flex; justify-content: space-between; }
+.span-row { width: 100%; padding: var(--s-1) 8px; background: none; border: 1px solid transparent; text-align: left; cursor: pointer; font-family: var(--data); font-size: var(--t-small); }
+.span-row:hover { background: var(--stage-3); }
+.span-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: calc(var(--lvl) * 10px); }
+.span-track { position: relative; height: 12px; }
+.span-track i { position: absolute; top: 0; bottom: 0; left: var(--l); width: var(--w); min-width: 3px; background: var(--span); transform-origin: left; animation: grow-x .7s cubic-bezier(.2, .7, .2, 1) both; animation-delay: var(--d); }
+.span-row.root .span-track i { background: var(--bad); }
+.span-row.retry .span-track i { background: var(--warn); }
+.span-dur { text-align: right; font-variant-numeric: tabular-nums; }
+.span-row.nope { animation: shake .35s; }
+.picked { outline: 1px solid var(--bad); background: var(--stage-3) !important; }
+
+/* ---------- Mission 2 ---------- */
+.chart { align-items: center; justify-content: center; overflow: hidden; }
+.relsvg { display: block; width: 100%; height: 100%; max-height: 380px; font-family: var(--data); }
+.relsvg .lab { fill: var(--stage-muted); font-size: 11px; }
+.relsvg .val { fill: var(--stage-ink); font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.relsvg .ver { fill: var(--stage-ink); font-size: 12.5px; text-anchor: middle; }
+.relsvg .base { stroke: var(--stage-line); stroke-width: 1; }
+.relsvg .bar { fill: var(--span); transform-box: fill-box; transform-origin: center bottom; }
+.relsvg.is-playing .bar { animation: grow-y .8s cubic-bezier(.2, .7, .2, 1) both; animation-delay: var(--d); }
+.relsvg .hit { fill: transparent; stroke: transparent; }
+.relsvg .col { cursor: pointer; outline: none; }
+.relsvg .col:hover .hit, .relsvg .col:focus-visible .hit { fill: var(--stage-3); stroke: var(--stage-line); }
+.relsvg .col:focus-visible .hit { stroke: var(--span); }
+.relsvg .col.right .hit { fill: var(--stage-3); stroke: var(--bad); }
+.relsvg .col.right .bar { fill: var(--bad); }
+.relsvg .col.wrong { animation: shake .35s; transform-box: fill-box; }
+.note { font-family: var(--data); font-size: var(--t-small); color: var(--warn) !important; }
+
+/* ---------- Mission 3 ---------- */
+.s3 { display: flex; flex-direction: column; gap: var(--s-3); height: 100%; min-height: 0; }
+.s3-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; flex: none; }
+.lanes { display: flex; gap: 8px; flex-wrap: wrap; }
+.lane { border: 1px solid var(--stage-line); background: none; color: var(--stage-ink); padding: 7px 13px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 13px; }
+.lane[aria-pressed="true"] { background: var(--stage-ink); color: var(--stage); border-color: var(--stage-ink); }
+.lane span { font-family: var(--data); font-weight: 400; font-size: 11px; margin-left: 5px; opacity: .75; }
+.arrows { display: flex; gap: 6px; }
+.arrow { width: 36px; height: 32px; border: 1px solid var(--stage-line); background: var(--stage-2); color: var(--stage-ink); cursor: pointer; font-size: 15px; line-height: 1; }
+.arrow:disabled { opacity: .35; cursor: default; }
+.deck { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: clamp(208px, 24%, 262px); grid-template-rows: minmax(0, 1fr); gap: var(--s-3); overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain; }
+.deck::-webkit-scrollbar { display: none; }
+.flip { perspective: 1100px; height: min(100%, 268px); min-height: 212px; scroll-snap-align: start; }
+.flip-in { position: relative; height: 100%; transition: transform .6s cubic-bezier(.3, .7, .2, 1); transform-style: preserve-3d; }
+.flip.is-flipped .flip-in { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; padding: var(--panel-pad); display: flex; flex-direction: column; gap: var(--s-2); text-align: left; transition: visibility 0s linear .3s; overflow: hidden; }
+.front { background: var(--stage-2); border: 1px solid var(--stage-line); cursor: pointer; color: var(--stage-ink); }
+.front:hover { border-color: var(--span); }
+.back { background: var(--stage-ink); color: var(--stage); transform: rotateY(180deg); visibility: hidden; }
+.is-flipped .back { visibility: visible; }
+.is-flipped .front { visibility: hidden; }
+.chip { font-family: var(--data); font-size: 10px; letter-spacing: .06em; padding: 2px 6px; border: 1px solid currentColor; align-self: flex-start; }
+.chip.ga { color: var(--ok); }
+.chip.pv { color: var(--warn); }
+.face h4 { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: 16px; line-height: 1.2; margin: 0; }
+.face p { font-size: 13px; line-height: 1.45; }
+.front p { color: var(--stage-muted); }
+.face-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-family: var(--data); font-size: var(--t-mono); }
+.front .face-foot { color: var(--stage-muted); }
+.turn { color: var(--span); }
+.for { font-family: var(--data); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+.why { font-family: var(--display); font-stretch: 108%; font-weight: 700; font-size: 15.5px !important; line-height: 1.3 !important; }
+.back a { font-weight: 700; font-size: 13px; }
+.flip-back { background: none; border: 0; padding: 0; font-family: var(--data); font-size: var(--t-mono); text-decoration: underline; cursor: pointer; color: var(--stage); }
+
+/* ---------- Missions 4 and 6: one question at a time ---------- */
+.qcard { justify-content: flex-start; }
+.qwho { font-family: var(--data); font-size: var(--t-mono); color: var(--stage-muted); }
+.qtext { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: var(--t-card); line-height: 1.25; text-wrap: balance; color: var(--stage-ink); }
+.claim { font-size: clamp(17px, min(1.6vw, 3.3vh), 23px); }
+.opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.opts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.opt { padding: var(--s-2) 6px; border: 1px solid var(--stage-line); background: var(--stage); color: var(--stage-ink); font-family: var(--data); font-size: 15px; cursor: pointer; }
+.opts.two .opt { font-family: var(--display); font-stretch: 115%; font-weight: 800; font-size: 15px; }
+.opt:hover:not(:disabled) { border-color: var(--span); }
+.opt:disabled { cursor: default; opacity: .5; }
+.opt.right { background: var(--ok); color: var(--stage); border-color: var(--ok); opacity: 1; }
+.opt.wrong { border-color: var(--bad); color: var(--bad); opacity: 1; }
+.reveal { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; animation: rise .4s both; }
+.reveal .big { font-family: var(--display); font-stretch: 125%; font-weight: 900; font-size: clamp(28px, min(3vw, 6vh), 40px); line-height: 1; color: var(--ok); font-variant-numeric: tabular-nums; }
+.reveal p { font-size: 13px; }
+.verdict { font-size: var(--t-body); color: var(--stage-ink); animation: rise .4s both; }
+.verdict strong { font-family: var(--display); font-stretch: 115%; }
+.qcount { font-family: var(--data); font-size: var(--t-mono); color: var(--stage-muted); }
+
+/* ---------- Mission 5 ---------- */
+.watch { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); align-content: start; }
+.vid { display: flex; flex-direction: column; background: var(--stage-2); border: 1px solid var(--stage-line); text-decoration: none; color: var(--stage-ink); transition: border-color .2s, transform .2s; }
+.vid:hover { border-color: var(--span); transform: translateY(-2px); }
+.thumb { aspect-ratio: 16 / 9; max-width: 100%; position: relative; display: grid; place-items: center; overflow: hidden; background: var(--stage-3); }
+.thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.thumb-art { position: absolute; inset: 0; display: flex; align-items: flex-end; padding: 10px 12px; font-family: var(--display); font-stretch: 125%; font-weight: 900; font-size: 22px; line-height: .95; color: var(--stage); background: var(--span); }
+.thumb-art.tone-a { background: var(--span); }
+.thumb-art.tone-b { background: var(--ok); }
+.thumb-art.tone-c { background: var(--warn); }
+.play { position: relative; width: 40px; height: 40px; border-radius: 50%; background: var(--stage-ink); display: grid; place-items: center; box-shadow: var(--shadow); }
+.play::before { content: ""; border-left: 12px solid var(--stage); border-top: 8px solid transparent; border-bottom: 8px solid transparent; margin-left: 3px; }
+.seen-tag { position: absolute; top: 8px; left: 8px; font-family: var(--data); font-size: 10px; background: var(--ok); color: var(--stage); padding: 2px 6px; display: none; }
+.vid.seen .seen-tag { display: block; }
+.vmeta { padding: var(--s-2) 12px var(--s-3); display: grid; gap: 4px; }
+.vsrc { font-family: var(--data); font-size: 10.5px; color: var(--stage-muted); }
+.vt { font-weight: 700; font-size: 13.5px; line-height: 1.3; }
+
+/* ---------- Plan ---------- */
+.steps { list-style: none; margin: 0; padding: 0 0 0 4px; border-left: 2px solid var(--stage-line); display: grid; gap: var(--s-3); }
+.steps li { position: relative; padding-left: 20px; }
+.steps li::before { content: ""; position: absolute; left: -8px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--stage-2); border: 2px solid var(--span); }
+.when { font-family: var(--data); font-size: var(--t-mono); color: var(--span); }
+.steps h3 { margin: 2px 0; }
+.addr { font-family: var(--data); font-size: 13px; user-select: all; background: var(--stage); color: var(--stage-ink); padding: 9px 11px; border: 1px solid var(--stage-line); overflow-wrap: anywhere; }
+
+/* ---------- Overlays ---------- */
+.toast { position: fixed; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ok); color: var(--stage); font-family: var(--data); font-weight: 600; font-size: 13px; padding: 8px 12px; transform: translateY(16px); opacity: 0; transition: opacity .3s, transform .3s; z-index: 70; pointer-events: none; }
+.toast.show { opacity: 1; transform: none; }
+.pop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: var(--veil); padding: 16px; }
+.pop-card { background: var(--card); color: var(--ink); padding: 26px 24px; max-width: 360px; width: 100%; text-align: center; display: grid; gap: 10px; animation: rise .5s both; }
+.medal { width: 88px; height: 88px; margin: 0 auto 4px; border-radius: 50%; background: conic-gradient(var(--ok), var(--span), var(--brand), var(--warn), var(--ok)); display: grid; place-items: center; animation: spin 6s linear infinite; }
+.medal span { width: 62px; height: 62px; border-radius: 50%; background: var(--card); display: grid; place-items: center; font-family: var(--display); font-stretch: 125%; font-weight: 900; font-size: 22px; animation: spin 6s linear infinite reverse; }
+.pop-card h3 { margin: 0; font-family: var(--display); font-stretch: 120%; font-weight: 800; font-size: 21px; }
+.pop-card p { color: var(--muted); }
+.pop-card .row { display: flex; gap: 8px; justify-content: center; }
+.pop .btn-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pop .btn-secondary { color: var(--ink); border-color: var(--ink); }
+
+/* ---------- Landing ---------- */
+.landing {
+  position: fixed; inset: 0; z-index: 60; overflow: auto;
+  background-color: var(--stage);
+  background-image: linear-gradient(var(--stage-grid) 1px, transparent 1px), linear-gradient(90deg, var(--stage-grid) 1px, transparent 1px);
+  background-size: 36px 36px;
+  color: var(--stage-ink);
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-content: center; align-items: center;
+  gap: clamp(24px, 3.6vw, 56px);
+  padding-top: max(clamp(16px, 4vh, 40px), env(safe-area-inset-top, 0px)); padding-bottom: max(clamp(16px, 4vh, 40px), env(safe-area-inset-bottom, 0px));
+  padding-left: max(clamp(16px, 3vw, 40px), calc((100vw - 1240px) / 2), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(16px, 3vw, 40px), calc((100vw - 1240px) / 2), env(safe-area-inset-right, 0px));
+  transition: opacity .35s, transform .35s;
+}
+.landing.leaving { opacity: 0; transform: translateY(-16px); }
+.l-sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.l-copy, .l-side { position: relative; z-index: 1; }
+.l-copy { display: flex; flex-direction: column; align-items: flex-start; animation: rise .6s both; }
+.l-brand { font-family: var(--display); font-stretch: 125%; font-weight: 800; font-size: 15px; margin-bottom: clamp(12px, 3vh, 28px); }
+.l-brand .x { color: var(--stage-muted); font-weight: 400; margin-inline: 6px; }
+.l-kicker { font-family: var(--data); font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--warn); margin-bottom: clamp(10px, 2vh, 16px); }
+.landing h1 { font-family: var(--display); font-stretch: 125%; font-weight: 900; font-size: var(--t-hero); line-height: 1.07; letter-spacing: -.015em; margin: 0 0 clamp(12px, 2.6vh, 22px); text-wrap: balance; }
+.l-sub { margin: 0 0 clamp(16px, 3.4vh, 28px); font-size: clamp(14px, min(1.2vw, 2.6vh), 17px); line-height: 1.55; color: var(--stage-muted); max-width: 48ch; }
+.l-cta { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.l-start { font-family: var(--display); font-stretch: 118%; font-weight: 800; font-size: 15.5px; padding: clamp(11px, 2vh, 15px) 22px; border: 0; background: var(--stage-ink); color: var(--stage); cursor: pointer; display: inline-flex; align-items: center; gap: 10px; }
+.l-start:hover { background: var(--span); }
+.l-start .arrow-r { transition: transform .2s; }
+.l-start:hover .arrow-r { transform: translateX(4px); }
+.l-skip { background: none; border: 0; padding: 0; color: var(--stage-muted); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; font-size: 14px; }
+.l-side { display: grid; gap: clamp(12px, 2.2vh, 18px); animation: rise .6s .15s both; }
+.l-trace { background: var(--stage-2); border: 1px solid var(--stage-line); padding: clamp(12px, 2vh, 18px) 18px; }
+.l-trace-head { display: flex; justify-content: space-between; font-family: var(--data); font-size: 11.5px; color: var(--stage-muted); padding-bottom: clamp(8px, 1.4vh, 12px); margin-bottom: clamp(4px, .8vh, 8px); border-bottom: 1px solid var(--stage-line); }
+.l-tr { display: grid; grid-template-columns: minmax(0, 40%) minmax(0, 1fr); gap: 14px; align-items: center; padding: clamp(3px, .8vh, 6px) 0; font-family: var(--data); font-size: 12px; }
+.l-tr span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: calc(var(--lvl) * 12px); }
+.l-tr .track { position: relative; height: 10px; }
+.l-tr .track i { position: absolute; top: 0; bottom: 0; left: var(--l); width: var(--w); background: var(--span); transform-origin: left; animation: loopdraw 5.5s cubic-bezier(.2, .7, .2, 1) infinite; animation-delay: var(--d); }
+.l-tr.bad .track i { background: var(--bad); }
+.l-tr.warn .track i { background: var(--warn); }
+.l-missions { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; counter-reset: lm; }
+.l-missions li { counter-increment: lm; background: var(--stage); border: 1px solid var(--stage-line); padding: clamp(8px, 1.6vh, 12px) 14px; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 2px 8px; font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.l-missions li::before { content: counter(lm); grid-row: span 2; font-family: var(--data); font-size: 12px; color: var(--span); font-weight: 500; }
+.l-missions li span { font-family: var(--data); font-size: 11px; font-weight: 400; color: var(--stage-muted); }
+.l-missions li.done { border-color: var(--ok); }
+.l-missions li.done::before { content: "\2713"; color: var(--ok); }
+
+/* ---------- Keyframes ---------- */
+@keyframes bump { 40% { transform: scale(1.35); color: var(--brand); } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes enter { from { opacity: .001; transform: translateY(6px); } }
+@keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes blink { 50% { opacity: .25; } }
+@keyframes ring { 0% { opacity: .9; transform: scale(.98); } 100% { opacity: 0; transform: scale(1.08); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes grow-y { from { transform: scaleY(0); } }
+@keyframes loopdraw { 0% { transform: scaleX(0); } 22%, 88% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+
+/* ---------- Medium widths ---------- */
+@media (max-width: 1100px) {
+  .xp .rank, .meter-label { display: none; }
+}
+
+/* ---------- Phones and small tablets ---------- */
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  body { display: block; }
+  .bar { gap: 10px 12px; flex-wrap: wrap; }
+  .console { display: block; }
+  .rail { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); gap: 6px; scrollbar-width: none; }
+  .rail::-webkit-scrollbar { display: none; }
+  .hello, .rail-foot { display: none; }
+  .mission { flex: 0 0 auto; border-left: 0; border-bottom: 3px solid transparent; padding: 6px 10px; grid-template-columns: 10px auto; }
+  .mission .m-meta { display: none; }
+  .mission .dot { grid-row: auto; margin-top: 5px; }
+  .mission[aria-current="page"] { border-bottom-color: var(--brand); }
+  .stage { overflow: visible; min-height: 70vh; }
+  .scene { height: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .scene-head { grid-template-columns: 1fr; }
+  .pill { grid-column: 1; grid-row: auto; justify-self: start; }
+  .split, .split.m1 { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
+  .phone { --ph: 420px; justify-self: center; }
+  .inv .panel { min-height: 300px; }
+  .relsvg { height: auto; max-height: none; }
+  .deck { height: 250px; flex: none; }
+  .watch { grid-template-columns: 1fr 1fr; }
+  .mobile-foot { display: flex !important; }
+  .landing { grid-template-columns: minmax(0, 1fr); gap: 24px; align-content: start; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .landing h1 { font-size: clamp(28px, 7.2vw, 40px); }
+  .l-trace { display: none; }
+}
+.mobile-foot { display: none; gap: 14px; padding: 0 16px 24px; max-width: 1180px; margin-inline: auto; }
+@media (max-width: 520px) {
+  .brand { font-size: 12.5px; }
+  .segs i { width: 10px; }
+  .watch { grid-template-columns: 1fr; }
+  .l-missions { grid-template-columns: 1fr; }
+  .wf-scale, .span-row { grid-template-columns: minmax(0, 44%) minmax(0, 1fr) 42px; gap: 6px; }
+  .tl-row { grid-template-columns: 52px minmax(0, 1fr) 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .flip.is-flipped .flip-in { transform: none; }
+  .flip.is-flipped .front { display: none; }
+  .flip .back { transform: none; }
+  .flip:not(.is-flipped) .back { display: none; }
+}
+</style>
+</head>
+<body>
+
+<section class="landing" id="landing" aria-labelledby="lTitle">
+  <canvas class="l-sky" id="lSky" aria-hidden="true"></canvas>
+  <div class="l-copy">
+    <span class="l-brand">Datadog<span class="x">&times;</span>PowerUp Money</span>
+    <span class="l-kicker">Prepared for the PowerUp engineering team</span>
+    <h1 id="lTitle">See how Datadog would catch a slow SIP before your users do.</h1>
+    <p class="l-sub">Six short missions for the PowerUp engineering team. Trace a tap to the backend call that slowed it, spot a bad Flutter release, and see what Datadog shipped this year. About eight minutes.</p>
+    <div class="l-cta">
+      <button class="l-start" id="lStart" type="button"><span id="lStartLabel">Start mission 1</span><span class="arrow-r" aria-hidden="true">&rarr;</span></button>
+      <button class="l-skip" id="lSkip" type="button">Skip to next steps</button>
+    </div>
+  </div>
+  <div class="l-side">
+    <div class="l-trace" aria-hidden="true">
+      <div class="l-trace-head"><span>POST /v2/sip/create</span><span>4.12s</span></div>
+      <div class="l-tr" style="--lvl:0"><span>bff-gateway</span><span class="track"><i style="--l:0%;--w:100%;--d:0s"></i></span></div>
+      <div class="l-tr" style="--lvl:1"><span>sip-service</span><span class="track"><i style="--l:1%;--w:98%;--d:.15s"></i></span></div>
+      <div class="l-tr" style="--lvl:2"><span>postgres</span><span class="track"><i style="--l:2%;--w:1.5%;--d:.3s"></i></span></div>
+      <div class="l-tr bad" style="--lvl:2"><span>nav-client</span><span class="track"><i style="--l:4%;--w:48.5%;--d:.45s"></i></span></div>
+      <div class="l-tr warn" style="--lvl:2"><span>nav-client retry</span><span class="track"><i style="--l:53.5%;--w:44%;--d:.6s"></i></span></div>
+    </div>
+    <ol class="l-missions" id="lMissions">
+      <li data-m="m1">Trace the slow SIP<span>2 min</span></li>
+      <li data-m="m2">Spot the bad release<span>1 min</span></li>
+      <li data-m="m3">Shipped this year<span>2 min</span></li>
+      <li data-m="m4">Guess the number<span>1 min</span></li>
+      <li data-m="m5">Watch list<span>2 videos</span></li>
+      <li data-m="m6">Myth or fact<span>1 min</span></li>
+    </ol>
+  </div>
+</section>
+
+<header class="bar">
+  <a class="brand" href="#m1">Datadog<span class="x">&times;</span>PowerUp Money</a>
+  <div class="meter">
+    <div class="segs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <span class="meter-label" id="meterLabel">0 of 6 missions</span>
+  </div>
+  <div class="xp" aria-live="polite"><b id="xpNum">0</b><span>XP</span><span class="rank" id="rank">Observer</span></div>
+  <span class="medal-chip" id="medalChip" hidden>Release Guardian</span>
+  <button class="plan-btn" type="button" data-go="plan">Next steps</button>
+</header>
+
+<div class="console">
+  <nav class="rail" aria-label="Missions">
+    <p class="hello"><strong>Hi PowerUp team.</strong>Six short missions on monitoring your Flutter app, backend and AI agents with Datadog. About eight minutes.</p>
+    <button class="mission" type="button" data-go="m1"><span class="dot" aria-hidden="true"></span><span class="m-name">Trace the slow SIP</span><span class="m-meta">Front end to back end</span></button>
+    <button class="mission" type="button" data-go="m2"><span class="dot" aria-hidden="true"></span><span class="m-name">Spot the bad release</span><span class="m-meta">Release over release</span></button>
+    <button class="mission" type="button" data-go="m3"><span class="dot" aria-hidden="true"></span><span class="m-name">Shipped this year</span><span class="m-meta">14 releases for your stack</span></button>
+    <button class="mission" type="button" data-go="m4"><span class="dot" aria-hidden="true"></span><span class="m-name">Guess the number</span><span class="m-meta">Customer results</span></button>
+    <button class="mission" type="button" data-go="m5"><span class="dot" aria-hidden="true"></span><span class="m-name">Watch list</span><span class="m-meta">Demos and talks</span></button>
+    <button class="mission" type="button" data-go="m6"><span class="dot" aria-hidden="true"></span><span class="m-name">Myth or fact</span><span class="m-meta">Your questions, answered</span></button>
+    <div class="rail-foot"><button class="link" type="button" data-reset>Reset progress</button></div>
+  </nav>
+
+  <main class="stage" id="stage">
+
+    <!-- Mission 1 -->
+    <section class="scene" id="m1" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 1 of 6</span><span>Front end to back end</span><span class="demo">Demo data</span></div>
+        <h2>Trace the slow SIP</h2>
+        <p class="brief">A user taps Start SIP and waits four seconds on a spinner. Find the cause in three taps.</p>
+        <span class="pill" id="m1Pill">3 taps to root cause</span>
+      </header>
+      <div class="scene-body">
+        <div class="split m1">
+          <div class="phone" aria-label="Demo investment app">
+            <div class="screen">
+              <div class="island" aria-hidden="true"></div>
+              <div class="app">
+                <div class="app-row"><span class="app-title">Portfolio</span><span class="demo-tag">Demo app</span></div>
+                <div>
+                  <p class="app-label">Current value</p>
+                  <p class="app-value">&#8377;4,82,310</p>
+                  <p class="app-delta">+&#8377;8,604 today &middot; 1.8%</p>
+                </div>
+                <svg class="app-spark" viewBox="0 0 220 54" preserveAspectRatio="none" aria-hidden="true">
+                  <path d="M0 46 L20 42 L40 44 L60 36 L80 38 L100 29 L120 32 L140 23 L160 26 L180 16 L200 18 L220 8 L220 54 L0 54 Z" fill="currentColor" opacity=".12"/>
+                  <path d="M0 46 L20 42 L40 44 L60 36 L80 38 L100 29 L120 32 L140 23 L160 26 L180 16 L200 18 L220 8" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>
+                </svg>
+                <ul class="funds">
+                  <li><span>Flexi cap fund</span><span>&#8377;1,92,400</span></li>
+                  <li><span>Large and mid cap</span><span>&#8377;1,41,880</span></li>
+                  <li><span>Short duration debt</span><span>&#8377;1,48,030</span></li>
+                </ul>
+                <button class="sip-btn pulse" id="sipBtn" type="button">Start SIP &middot; &#8377;5,000/mo</button>
+              </div>
+              <div class="freeze" id="freeze" hidden><span class="freeze-tag">Waiting &middot; <span id="freezeT">0.0s</span></span></div>
+            </div>
+          </div>
+          <div class="inv">
+            <p class="hint" id="m1Hint">Tap Start SIP on the phone.</p>
+            <div class="panel">
+              <div class="inv-tabs">
+                <button class="inv-tab" type="button" data-step="1" disabled>1 &middot; Session</button>
+                <button class="inv-tab" type="button" data-step="2" disabled>2 &middot; Trace</button>
+                <button class="inv-tab" type="button" data-step="3" disabled>3 &middot; Root cause</button>
+              </div>
+              <div class="inv-view" id="invGhost">
+                <div class="ghost" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <p>The session, its backend trace and the root cause open here, one step at a time.</p>
+              </div>
+              <div class="inv-view" id="invSession" hidden>
+                <div class="view-head"><span>RUM session &middot; Android 14 &middot; app v6.3.0</span><span>user u_9f31&hellip; (masked)</span></div>
+                <ol class="timeline">
+                  <li class="tl-row"><span class="t">+0.00s</span><span class="ev">Tap &middot; Start SIP</span><span class="dur"></span></li>
+                  <li><button class="tl-row ready" id="reqRow" type="button"><span class="t">+0.02s</span><span class="ev">POST /v2/sip/create</span><span class="dur bad-t">4.10s</span><span class="tl-bar"><i style="--w:97%"></i></span></button></li>
+                  <li class="tl-row"><span class="t">+4.12s</span><span class="ev">View &middot; SIP confirmed</span><span class="dur"></span></li>
+                </ol>
+              </div>
+              <div class="inv-view" id="invTrace" hidden>
+                <div class="view-head"><span>APM trace &middot; POST /v2/sip/create</span><span>4.12s total</span></div>
+                <div class="wf-scale" aria-hidden="true"><span>service &middot; span</span><span><b>0s</b><b>2s</b><b>4s</b></span><span></span></div>
+                <div>
+                  <button class="span-row" type="button" style="--lvl:0" data-tip="That is the whole request. Look inside it."><span class="span-name">bff-gateway &middot; POST /sip</span><span class="span-track"><i style="--l:0%;--w:100%;--d:0ms"></i></span><span class="span-dur">4.12s</span></button>
+                  <button class="span-row" type="button" style="--lvl:1" data-tip="Still the parent. Go one level deeper."><span class="span-name">sip-service &middot; create_sip</span><span class="span-track"><i style="--l:1%;--w:98%;--d:100ms"></i></span><span class="span-dur">4.05s</span></button>
+                  <button class="span-row" type="button" style="--lvl:2" data-tip="30 ms. The database is fine."><span class="span-name">postgres &middot; SELECT mandates</span><span class="span-track"><i style="--l:2%;--w:1%;--d:200ms"></i></span><span class="span-dur">0.03s</span></button>
+                  <button class="span-row root" type="button" style="--lvl:2" data-root="1"><span class="span-name">nav-client &middot; GET /nav</span><span class="span-track"><i style="--l:4%;--w:48.5%;--d:300ms"></i></span><span class="span-dur bad-t">2.00s</span></button>
+                  <button class="span-row retry" type="button" style="--lvl:2" data-tip="Close. This is the retry. What made it retry?"><span class="span-name">nav-client &middot; GET /nav (retry)</span><span class="span-track"><i style="--l:53.5%;--w:44%;--d:400ms"></i></span><span class="span-dur">1.82s</span></button>
+                  <button class="span-row" type="button" style="--lvl:2" data-tip="10 ms. Not the culprit."><span class="span-name">kafka &middot; publish sip.created</span><span class="span-track"><i style="--l:98%;--w:1%;--d:500ms"></i></span><span class="span-dur">0.01s</span></button>
+                </div>
+              </div>
+              <div class="inv-view" id="invRoot" hidden>
+                <span class="label bad">Root cause</span>
+                <h3>The NAV pricing provider timed out at 2 seconds, the client retried, and the user waited 4.1.</h3>
+                <p>In Datadog the tap, the trace and the provider error sit one click apart. Bits Investigation posts the same finding in Slack.</p>
+                <div class="stats"><span>Solved in <b id="m1Time">00:00</b></span><span><b id="m1Taps">3</b> taps</span><span><b>+25 XP</b></span></div>
+                <div class="actions"><button class="btn-primary" type="button" data-next="m1">Next mission</button><button class="btn-secondary" type="button" id="m1Replay">Replay</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mission 2 -->
+    <section class="scene" id="m2" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 2 of 6</span><span>Release over release</span><span class="demo">Demo data</span></div>
+        <h2>Spot the bad release</h2>
+        <p class="brief">One of these five Flutter releases made the app slower. Tap it.</p>
+        <span class="pill" id="m2Pill">Pick one release</span>
+      </header>
+      <div class="scene-body">
+        <div class="split">
+          <div class="panel chart"><div id="rel" style="width:100%;height:100%"></div></div>
+          <div class="panel">
+            <div id="m2Intro">
+              <span class="label">How to read it</span>
+              <p style="margin-top:8px">Each column is one release. The bars show app start time, frozen frames and crashes per 100 sessions. Taller is worse.</p>
+              <p class="note" id="m2Wrong" style="margin-top:10px" hidden></p>
+            </div>
+            <div id="m2Result" hidden style="display:flex;flex-direction:column;gap:10px;flex:1">
+              <span class="label ok">Found it</span>
+              <h3>v6.3.0. App start nearly doubled and frozen frames rose 75%.</h3>
+              <p>Datadog compares each release with the one before it while it rolls out. Feature Flags can roll a regressing release back automatically.</p>
+              <p><a href="https://www.datadoghq.com/blog/datadog-rum-deployment-tracking/" target="_blank" rel="noopener">Deployment Tracking</a> &middot; <a href="https://docs.datadoghq.com/getting_started/feature_flags/" target="_blank" rel="noopener">Feature Flags</a></p>
+              <div class="actions"><button class="btn-primary" type="button" data-next="m2">Next mission</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mission 3 -->
+    <section class="scene" id="m3" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 3 of 6</span><span>Last 12 months</span></div>
+        <h2>Shipped this year</h2>
+        <p class="brief">Fourteen Datadog releases that fit your stack, including six RUM launches from the last two months. Flip any five to see why they matter to PowerUp.</p>
+        <span class="pill" id="flipCount">Flipped 0 of 5</span>
+      </header>
+      <div class="scene-body">
+        <div class="s3">
+          <div class="s3-bar">
+            <div class="lanes" role="group" aria-label="Filter releases">
+              <button class="lane" type="button" data-lane="app" aria-pressed="true">Your app<span>7</span></button>
+              <button class="lane" type="button" data-lane="agents" aria-pressed="false">Your AI agents<span>2</span></button>
+              <button class="lane" type="button" data-lane="sre" aria-pressed="false">Your SRE team<span>5</span></button>
+            </div>
+            <div class="arrows"><button class="arrow" type="button" id="deckPrev" aria-label="Previous releases">&larr;</button><button class="arrow" type="button" id="deckNext" aria-label="More releases">&rarr;</button></div>
+          </div>
+          <div class="deck" id="deck"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mission 4 -->
+    <section class="scene" id="m4" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 4 of 6</span><span>Customer results</span></div>
+        <h2>Guess the number</h2>
+        <p class="brief">Published results from fintech, banking and mobile teams. Guess first, then check.</p>
+        <span class="pill" id="quizScore">0 of 6 answered</span>
+      </header>
+      <div class="scene-body">
+        <div class="split">
+          <div class="panel qcard" id="qCard"></div>
+          <div class="panel">
+            <span class="label">Scoreboard</span>
+            <ol class="board-list" id="qBoard"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mission 5 -->
+    <section class="scene" id="m5" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 5 of 6</span><span>Demos and talks</span></div>
+        <h2>Watch list</h2>
+        <p class="brief">Open any two to complete the mission. Each opens in a new tab.</p>
+        <span class="pill" id="watchCount">Opened 0 of 2</span>
+      </header>
+      <div class="scene-body">
+        <div class="watch" id="watch"></div>
+      </div>
+    </section>
+
+    <!-- Mission 6 -->
+    <section class="scene" id="m6" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Mission 6 of 6</span><span>From our call</span></div>
+        <h2>Myth or fact</h2>
+        <p class="brief">Four questions that came up on our call. Pick myth or fact for each.</p>
+        <span class="pill" id="mfPill">0 of 4 answered</span>
+      </header>
+      <div class="scene-body">
+        <div class="split">
+          <div class="panel qcard" id="mf"></div>
+          <div class="panel">
+            <span class="label">Your calls</span>
+            <ol class="board-list" id="mfBoard"></ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Plan -->
+    <section class="scene" id="plan" hidden>
+      <header class="scene-head">
+        <div class="kicker"><span>Next steps</span></div>
+        <h2>Your deep dive</h2>
+        <p class="brief">Three steps to a decision on Wednesday 18 November.</p>
+        <span class="pill">Wed 18 Nov</span>
+      </header>
+      <div class="scene-body">
+        <div class="split">
+          <div class="panel">
+            <ol class="steps">
+              <li><span class="when">By Friday 13 November</span><h3>You share three numbers</h3><p>Daily app sessions, current Sentry spend and monthly log volume.</p></li>
+              <li><span class="when">Before your review on 16 and 17 November</span><h3>We send a side by side</h3><p>Datadog against your current setup, on the same usage.</p></li>
+              <li><span class="when">Wednesday 18 November</span><h3>Deep dive with your team</h3><p>Mobile, APM and AI investigation on your own use cases, with you and the frontend team.</p></li>
+            </ol>
+          </div>
+          <div class="panel">
+            <span class="label">Your contact</span>
+            <h3>Abhishek Gupta</h3>
+            <p>Account Executive, Datadog India</p>
+            <div class="addr" id="addr">abhishek.gupta@datadoghq.com</div>
+            <p>Forward the link Abhishek sent to anyone on your team. Each person's progress saves in their own browser.</p>
+            <div class="actions">
+              <button class="btn-primary" type="button" id="copyAddr">Copy email</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="mobile-foot"><button class="link" type="button" data-reset>Reset progress</button></div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+<div class="pop" id="pop" hidden>
+  <div class="pop-card" role="dialog" aria-modal="true" aria-labelledby="popTitle">
+    <div class="medal" aria-hidden="true"><span>6/6</span></div>
+    <h3 id="popTitle">Release Guardian</h3>
+    <p>All six missions done. Your deep dive plan is ready.</p>
+    <div class="row"><button class="btn-primary" type="button" id="popGo">See next steps</button><button class="btn-secondary" type="button" id="popClose">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var narrow = function () { return window.matchMedia('(max-width: 860px)').matches; };
+  var MISSIONS = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'];
+  var KEY = 'pu-dd-progress-v2';
+
+  var st = { done: {}, xp: 0, flipped: [], quiz: {}, watched: [], mf: {}, badge: false };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved) Object.keys(st).forEach(function (k) { if (saved[k] !== undefined) st[k] = saved[k]; });
+  } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+
+  /* XP, progress, toast */
+  var toastEl = $('#toast'), toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1700);
+  }
+  function rank(x) { return x >= 100 ? 'Release Guardian' : x >= 50 ? 'Investigator' : 'Observer'; }
+  function renderMeter() {
+    var n = MISSIONS.filter(function (m) { return st.done[m]; }).length;
+    $$('.segs i').forEach(function (el, i) { el.classList.toggle('on', i < n); });
+    $('#meterLabel').textContent = n + ' of 6 missions';
+    $('#xpNum').textContent = st.xp;
+    $('#rank').textContent = rank(st.xp);
+    $('#medalChip').hidden = !st.badge;
+    $$('.mission').forEach(function (b) { b.classList.toggle('done', !!st.done[b.dataset.go]); });
+  }
+  function addXP(n) {
+    st.xp += n; save(); renderMeter();
+    var x = $('.xp'); x.classList.remove('bump'); void x.offsetWidth; x.classList.add('bump');
+    toast('+' + n + ' XP');
+  }
+  function complete(id) {
+    if (st.done[id]) return;
+    st.done[id] = true; save(); renderMeter();
+    if (!st.badge && MISSIONS.every(function (m) { return st.done[m]; })) {
+      st.badge = true; save(); renderMeter();
+      setTimeout(function () { $('#pop').hidden = false; $('#popGo').focus(); }, 900);
+    }
+  }
+  $('#popGo').addEventListener('click', function () { $('#pop').hidden = true; go('plan'); });
+  $('#popClose').addEventListener('click', function () { $('#pop').hidden = true; });
+
+  /* Navigation */
+  function nextOf(id) {
+    var i = MISSIONS.indexOf(id);
+    var order = MISSIONS.slice(i + 1).concat(MISSIONS.slice(0, Math.max(i, 0)));
+    for (var j = 0; j < order.length; j++) if (!st.done[order[j]]) return order[j];
+    return 'plan';
+  }
+  function go(id, quiet) {
+    var target = document.getElementById(id);
+    if (!target || !target.classList.contains('scene')) id = 'm1';
+    $$('.scene').forEach(function (s) { s.hidden = s.id !== id; });
+    $$('[data-go]').forEach(function (b) {
+      if (b.dataset.go === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    var stage = $('#stage'); stage.scrollTop = 0;
+    if (narrow()) {
+      var chip = $('.mission[aria-current="page"]');
+      if (chip) chip.scrollIntoView({ inline: 'center', block: 'nearest' });
+      if (!quiet) stage.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    }
+    if (id === 'm2') playM2();
+    if (id === 'm3') { deck.scrollLeft = 0; requestAnimationFrame(arrows); }
+  }
+  $$('[data-go]').forEach(function (b) { b.addEventListener('click', function (e) { e.preventDefault(); go(b.dataset.go); }); });
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-next]');
+    if (b) go(nextOf(b.dataset.next));
+  });
+  window.addEventListener('hashchange', function () { go(location.hash.slice(1), true); });
+
+  function fadeIn(el) { el.classList.remove('fade'); void el.offsetWidth; el.classList.add('fade'); }
+
+  /* Mission 1: trace the slow SIP */
+  var m1 = { stage: 0, start: 0, taps: 0, timer: null };
+  var sip = $('#sipBtn');
+  var VIEWS = ['#invGhost', '#invSession', '#invTrace', '#invRoot'];
+  function hint(t, done) { var h = $('#m1Hint'); h.textContent = t; h.classList.toggle('done', !!done); }
+  function showStep(n) {
+    VIEWS.forEach(function (s, i) { $(s).hidden = i !== n; });
+    $$('.inv-tab').forEach(function (t) {
+      var k = +t.dataset.step;
+      t.disabled = k > m1.stage;
+      t.classList.toggle('on', k === n);
+      t.classList.toggle('done', k <= m1.stage && k !== n && m1.stage >= k);
+    });
+    if (n > 0) fadeIn($(VIEWS[n]));
+  }
+  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r; }
+  function resetM1() {
+    m1.stage = 0; m1.taps = 0; clearInterval(m1.timer);
+    sip.className = 'sip-btn pulse'; sip.innerHTML = 'Start SIP &middot; &#8377;5,000/mo';
+    $('#freeze').hidden = true; $('#freezeT').textContent = '0.0s';
+    $('#reqRow').classList.remove('picked'); $('#reqRow').classList.add('ready');
+    $$('.span-row').forEach(function (r) { r.classList.remove('picked', 'nope'); });
+    $('#m1Pill').textContent = '3 taps to root cause';
+    hint('Tap Start SIP on the phone.');
+    showStep(0);
+  }
+  sip.addEventListener('click', function () {
+    if (m1.stage !== 0) return;
+    m1.start = Date.now(); m1.taps = 1;
+    sip.classList.remove('pulse'); sip.classList.add('busy');
+    sip.innerHTML = '<span class="spin" aria-hidden="true"></span>Setting up SIP';
+    $('#freeze').hidden = false;
+    var t0 = Date.now();
+    m1.timer = setInterval(function () {
+      var s = Math.min((Date.now() - t0) / 1000, 4.1);
+      $('#freezeT').textContent = s.toFixed(1) + 's';
+      if (s >= 4.1) clearInterval(m1.timer);
+    }, 100);
+    setTimeout(function () {
+      m1.stage = 1; showStep(1);
+      hint('Datadog captured the session. Tap the slow request.');
+      $('#m1Pill').textContent = 'Step 1 of 3';
+    }, reduce ? 0 : 600);
+  });
+  $('#reqRow').addEventListener('click', function () {
+    if (m1.stage !== 1) return;
+    m1.stage = 2; m1.taps++;
+    this.classList.remove('ready'); this.classList.add('picked');
+    showStep(2);
+    hint('The request opened its backend trace. Tap the span that ate the time.');
+    $('#m1Pill').textContent = 'Step 2 of 3';
+  });
+  $$('.span-row').forEach(function (r) {
+    r.addEventListener('click', function () {
+      if (m1.stage !== 2) return;
+      m1.taps++;
+      if (r.dataset.root !== '1') {
+        r.classList.remove('nope'); void r.offsetWidth; r.classList.add('nope');
+        hint(r.dataset.tip || 'Not that one. Look for the red span.');
+        return;
+      }
+      m1.stage = 3; clearInterval(m1.timer);
+      r.classList.add('picked');
+      var secs = Math.max(1, Math.round((Date.now() - m1.start) / 1000));
+      $('#m1Time').textContent = fmt(secs);
+      $('#m1Taps').textContent = m1.taps;
+      $('#freeze').hidden = true;
+      sip.classList.remove('busy'); sip.classList.add('ok'); sip.textContent = 'SIP confirmed';
+      hint('Root cause found.', true);
+      $('#m1Pill').textContent = 'Solved in ' + fmt(secs);
+      showStep(3);
+      if (!st.done.m1) { addXP(25); complete('m1'); }
+    });
+  });
+  $$('.inv-tab').forEach(function (t) { t.addEventListener('click', function () { if (!t.disabled) showStep(+t.dataset.step); }); });
+  $('#m1Replay').addEventListener('click', resetM1);
+  showStep(0);
+
+  /* Mission 2: spot the bad release */
+  var REL = [
+    { v: '6.1.0', s: 1.7, f: 11, c: 0.4 },
+    { v: '6.2.0', s: 1.8, f: 12, c: 0.3 },
+    { v: '6.2.4', s: 1.8, f: 12, c: 0.4 },
+    { v: '6.3.0', s: 3.4, f: 21, c: 0.9 },
+    { v: '6.3.1', s: 1.9, f: 13, c: 0.4 }
+  ];
+  var MET = [
+    { k: 's', l1: 'App start', l2: 'p75, seconds', unit: 's', max: 4 },
+    { k: 'f', l1: 'Frozen frames', l2: 'per 100 sessions', unit: '', max: 25 },
+    { k: 'c', l1: 'Crashes', l2: 'per 100 sessions', unit: '', max: 1 }
+  ];
+  var relEl = $('#rel');
+  var W = 600, LEFT = 140, RIGHT = 596, COLW = (RIGHT - LEFT) / REL.length, ROWH = 100, BARH = 58, TOP = 26;
+  var svg = '<svg class="relsvg" id="relsvg" viewBox="0 0 ' + W + ' 352" role="group" aria-label="Five releases compared on app start, frozen frames and crashes">';
+  MET.forEach(function (m, j) {
+    var base = TOP + j * ROWH + BARH + 14;
+    svg += '<text class="lab" x="0" y="' + (base - 18) + '">' + m.l1 + '</text><text class="lab" x="0" y="' + (base - 4) + '">' + m.l2 + '</text>';
+  });
+  REL.forEach(function (r, i) {
+    var x0 = LEFT + COLW * i, cx = x0 + COLW / 2;
+    svg += '<g class="col" data-v="' + r.v + '" tabindex="0" role="button" aria-label="Release ' + r.v + ': app start ' + r.s + ' seconds, ' + r.f + ' frozen frames and ' + r.c + ' crashes per 100 sessions">';
+    svg += '<rect class="hit" x="' + (x0 + 4) + '" y="2" width="' + (COLW - 8) + '" height="346" rx="4"/>';
+    MET.forEach(function (m, j) {
+      var base = TOP + j * ROWH + BARH + 14;
+      var h = Math.max(2, r[m.k] / m.max * BARH);
+      svg += '<rect class="bar" x="' + (cx - 14) + '" y="' + (base - h).toFixed(1) + '" width="28" height="' + h.toFixed(1) + '" style="--d:' + (i * 90 + j * 50) + 'ms"/>';
+      svg += '<text class="val" x="' + cx + '" y="' + (base - h - 6).toFixed(1) + '">' + r[m.k] + m.unit + '</text>';
+    });
+    svg += '<text class="ver" x="' + cx + '" y="336">v' + r.v + '</text></g>';
+  });
+  MET.forEach(function (m, j) {
+    var base = TOP + j * ROWH + BARH + 14;
+    svg += '<line class="base" x1="' + LEFT + '" x2="' + RIGHT + '" y1="' + base + '" y2="' + base + '"/>';
+  });
+  svg += '</svg>';
+  relEl.innerHTML = svg;
+  var relSvg = $('#relsvg');
+  function playM2() { if (reduce) return; relSvg.classList.remove('is-playing'); void relSvg.getBoundingClientRect(); relSvg.classList.add('is-playing'); }
+  var m2tries = 0;
+  function solveM2(silent) {
+    $$('#relsvg .col').forEach(function (c) { c.classList.toggle('right', c.getAttribute('data-v') === '6.3.0'); });
+    $('#m2Intro').hidden = true; $('#m2Result').hidden = false;
+    $('#m2Pill').textContent = silent ? 'Solved' : 'Found in ' + m2tries + (m2tries === 1 ? ' try' : ' tries');
+    if (!silent && !st.done.m2) { addXP(m2tries <= 1 ? 20 : 10); complete('m2'); }
+  }
+  function pickRelease(g) {
+    if (!$('#m2Result').hidden) return;
+    m2tries++;
+    var v = g.getAttribute('data-v');
+    if (v === '6.3.0') { solveM2(false); return; }
+    g.classList.remove('wrong'); void g.getBoundingClientRect(); g.classList.add('wrong');
+    var w = $('#m2Wrong'); w.hidden = false;
+    w.textContent = 'v' + v + ' looks healthy. Compare app start time across the releases.';
+    $('#m2Pill').textContent = m2tries + (m2tries === 1 ? ' try' : ' tries');
+  }
+  $$('#relsvg .col').forEach(function (g) {
+    g.addEventListener('click', function () { pickRelease(g); });
+    g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickRelease(g); } });
+  });
+  if (st.done.m2) solveM2(true);
+
+  /* Mission 3: shipped this year */
+  var RELEASES = [
+    { lane: 'app', name: 'RUM Operations', status: 'GA', month: 'Oct 2026', what: 'Name the steps that matter, like login or placing an order, and get success rate, latency and SLOs from all traffic.', why: 'Track onboarding and SIP flows end to end, Flutter included.', url: 'https://www.datadoghq.com/blog/rum-operations-monitoring/' },
+    { lane: 'app', name: 'Journey Monitoring', status: 'GA', month: 'Oct 2026', what: 'One health status per user journey, combining real users, synthetic tests and where people drop off.', why: 'Product and SRE share one status for onboarding, KYC and SIP funnels.', url: 'https://www.datadoghq.com/blog/journey-monitoring/' },
+    { lane: 'app', name: 'RUM Profiling', status: 'GA', month: 'Nov 2026', what: 'Code-level profiles attached to slow app starts, long tasks and RUM operations on iOS, Android and browser.', why: 'See which code ran during a slow screen. Native iOS and Android today.', url: 'https://docs.datadoghq.com/real_user_monitoring/correlate_with_other_telemetry/profiling/' },
+    { lane: 'app', name: 'Export Pipelines', status: 'GA', month: 'Nov 2026', what: 'Stream RUM and Product Analytics events to your own S3, GCS or Azure storage in Parquet or JSON.', why: 'Join app behaviour with subscription data in your warehouse, and keep raw events for compliance.', url: 'https://www.datadoghq.com/blog/export-pipelines/' },
+    { lane: 'app', name: 'RUM Exclusion Filters', status: 'GA', month: 'Oct 2026', what: 'Stop bot traffic, retired app versions and known noisy errors from keeping sessions, set once for every retention rule.', why: 'Old-version errors you already know about stop crowding out the sessions worth replaying.', url: 'https://docs.datadoghq.com/real_user_monitoring/rum_without_limits/retention_filters/#exclusion-filters' },
+    { lane: 'app', name: 'RUM Managed Archive', status: 'GA', month: 'Nov 2026', what: 'Every session stored for 1, 3 or 6 months. Recover any one into RUM for a full investigation.', why: 'Pull up the exact session behind a support ticket or audit query, weeks later.', url: 'https://docs.datadoghq.com/real_user_monitoring/managed_archive/' },
+    { lane: 'app', name: 'Feature Flags', status: 'GA', month: 'Feb 2026', what: 'Progressive rollouts that roll back on their own when errors or latency regress.', why: 'Ship to a slice of users first and pull back before the rest notice.', url: 'https://docs.datadoghq.com/getting_started/feature_flags/' },
+    { lane: 'agents', name: 'Prompt Management', status: 'GA', month: 'Sep 2026', what: 'Version, deploy and roll back prompts from Datadog, tied to traces and evaluations.', why: 'Tune the WhatsApp portfolio agent without shipping a release.', url: 'https://docs.datadoghq.com/llm_observability/monitoring/prompt_management/' },
+    { lane: 'agents', name: 'AI Guard', status: 'Preview', month: 'Jun 2026', what: 'Inline checks on prompts, tool calls and outputs against prompt injection and data leaks.', why: 'A guardrail before an agent acts on a user’s money.', url: 'https://docs.datadoghq.com/security/ai_guard/' },
+    { lane: 'sre', name: 'Bits Investigation for incidents', status: 'GA', month: 'Oct 2026', what: 'AI root cause analysis on a live incident, using telemetry plus Slack and bridge call context.', why: 'Findings land in the Slack threads you already alert into.', url: 'https://docs.datadoghq.com/incident_response/incident_management/investigate/incident_ai/' },
+    { lane: 'sre', name: 'Scout 1.0', status: 'Preview', month: 'Oct 2026', what: 'Datadog’s own model, trained for SRE investigations. It powers Bits Investigation.', why: 'Built so every alert can get an investigation, including the ones that never page anyone.', url: 'https://www.datadoghq.com/blog/ai/introducing-scout-sre-specialized-model-bits-ai/' },
+    { lane: 'sre', name: 'Bits Code', status: 'GA', month: 'Jun 2026', what: 'Turns an alert, error or investigation into a tested pull request for review.', why: 'The fix PR your developers write today, drafted from the alert.', url: 'https://docs.datadoghq.com/bits_ai/bits_ai_dev_agent/' },
+    { lane: 'sre', name: 'MCP Server code execution', status: 'GA', month: 'Sep 2026', what: 'Your own agents query RUM, logs, metrics and traces in one sandboxed call.', why: 'Plug Datadog into the triage agents your SRE team already runs.', url: 'https://docs.datadoghq.com/mcp_server/code_execution/' },
+    { lane: 'sre', name: 'Native OTLP pipeline', status: 'GA', month: 'Oct 2026', what: 'Point a standard OpenTelemetry Collector at Datadog over OTLP, with no Datadog exporter.', why: 'Send to Datadog and LGTM side by side while you compare.', url: 'https://docs.datadoghq.com/opentelemetry/setup/collector_exporter/' }
+  ];
+  var deck = $('#deck'), lane = 'app';
+  function renderDeck() {
+    deck.innerHTML = RELEASES.map(function (r, i) {
+      if (r.lane !== lane) return '';
+      var seen = st.flipped.indexOf(i) !== -1;
+      return '<div class="flip' + (seen ? ' seen' : '') + '" data-i="' + i + '"><div class="flip-in">' +
+        '<button class="face front" type="button" aria-label="' + r.name + ', ' + r.status + '. Show why it matters">' +
+          '<span class="chip ' + (r.status === 'GA' ? 'ga' : 'pv') + '">' + r.status + '</span><h4>' + r.name + '</h4><p>' + r.what + '</p>' +
+          '<span class="face-foot"><span>' + r.month + '</span><span class="turn">' + (seen ? 'Seen' : 'Flip') + ' &#8635;</span></span></button>' +
+        '<div class="face back"><span class="for">For PowerUp</span><p class="why">' + r.why + '</p>' +
+          '<span class="face-foot"><a href="' + r.url + '" target="_blank" rel="noopener">Read more</a><button class="flip-back" type="button">Flip back</button></span></div>' +
+      '</div></div>';
+    }).join('');
+    deck.scrollLeft = 0;
+    requestAnimationFrame(arrows);
+  }
+  function arrows() {
+    var max = deck.scrollWidth - deck.clientWidth - 2;
+    $('#deckPrev').disabled = deck.scrollLeft <= 2;
+    $('#deckNext').disabled = deck.scrollLeft >= max;
+  }
+  $('#deckPrev').addEventListener('click', function () { deck.scrollBy({ left: -deck.clientWidth * 0.85, behavior: reduce ? 'auto' : 'smooth' }); });
+  $('#deckNext').addEventListener('click', function () { deck.scrollBy({ left: deck.clientWidth * 0.85, behavior: reduce ? 'auto' : 'smooth' }); });
+  deck.addEventListener('scroll', arrows, { passive: true });
+  window.addEventListener('resize', arrows);
+  function updateFlips(silent) {
+    var n = st.flipped.length;
+    $('#flipCount').textContent = n >= 5 ? 'Flipped ' + n + ' of 14' : 'Flipped ' + n + ' of 5';
+    if (n >= 5 && !st.done.m3 && !silent) { addXP(20); complete('m3'); }
+  }
+  deck.addEventListener('click', function (e) {
+    var card = e.target.closest('.flip'); if (!card) return;
+    if (e.target.closest('.front')) {
+      card.classList.add('is-flipped');
+      var i = +card.dataset.i;
+      if (st.flipped.indexOf(i) === -1) { st.flipped.push(i); save(); card.classList.add('seen'); updateFlips(false); }
+      var back = $('.flip-back', card); setTimeout(function () { back.focus({ preventScroll: true }); }, 60);
+    } else if (e.target.closest('.flip-back')) {
+      card.classList.remove('is-flipped');
+      $('.front', card).focus({ preventScroll: true });
+    }
+  });
+  $$('.lane').forEach(function (b) {
+    b.addEventListener('click', function () {
+      lane = b.dataset.lane;
+      $$('.lane').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      renderDeck();
+    });
+  });
+  renderDeck(); updateFlips(true);
+
+  /* Shared: count-up for revealed numbers */
+  function countUp(el, final) {
+    var m = /^(\d+)(.*)$/.exec(final); if (!m || reduce) { el.textContent = final; return; }
+    var n = +m[1], suffix = m[2], t0 = performance.now(), dur = 700;
+    (function tick(t) { var p = Math.min((t - t0) / dur, 1); el.textContent = Math.round(n * (1 - Math.pow(1 - p, 3))) + suffix; if (p < 1) requestAnimationFrame(tick); })(t0);
+  }
+
+  /* Mission 4: guess the number, one question at a time */
+  var QUIZ = [
+    { id: 'jitta', name: 'Jitta', who: 'Jitta · investing platform, Thailand', q: 'With a two-person infra team, how much faster did Jitta get at diagnosing incidents?', opts: ['65%', '90%', '40%'], a: 1, big: '90%', note: 'Plus 400+ engineering hours saved per person each year.', url: 'https://www.datadoghq.com/case-studies/jitta/' },
+    { id: 'paymongo', name: 'PayMongo', who: 'PayMongo · payments, Philippines', q: 'What share of incidents does PayMongo now resolve before customers notice?', opts: ['75%', '25%', '50%'], a: 0, big: '75%', note: 'Time to restore went from hours to minutes.', url: 'https://www.datadoghq.com/case-studies/paymongo/' },
+    { id: 'itau', name: 'Itaú Unibanco', who: 'Itaú Unibanco · largest bank in Latin America', q: 'How many tools did Itaú retire from its observability stack?', opts: ['8', '4', '13'], a: 2, big: '13', note: 'Issues resolved 35% faster, and front-end error visibility up 70%.', url: 'https://www.datadoghq.com/case-studies/itau-unibanco/' },
+    { id: 'birdie', name: 'Birdie', who: 'Birdie · mobile-first care app, UK', q: 'Birdie’s slowest app actions took 40 seconds. How long do they take now?', opts: ['10s', '4s', '20s'], a: 1, big: '4s', note: 'An 80% mobile performance gain, found with Mobile RUM.', url: 'https://www.datadoghq.com/case-studies/birdie/' },
+    { id: 'thrivent', name: 'Thrivent', who: 'Thrivent · financial services, US', q: 'Recovery used to take Thrivent about 10 hours. How long now?', opts: ['3h', '7h', '5h'], a: 0, big: '3h', note: 'Measured when Datadog monitors catch the issue, instead of a call centre.', url: 'https://www.datadoghq.com/case-studies/thrivent/' },
+    { id: 'fundbox', name: 'Fundbox', who: 'Fundbox · fintech, US', q: 'How many monitoring tools did Fundbox fold into Datadog?', opts: ['5', '8', '3'], a: 1, big: '8', note: 'Engineers stopped maintaining DIY customisations for eight separate tools.', url: 'https://www.datadoghq.com/case-studies/fundbox/' }
+  ];
+  var qCard = $('#qCard'), qIdx = 0;
+  while (qIdx < QUIZ.length && st.quiz[QUIZ[qIdx].id] !== undefined) qIdx++;
+  function quizRight() { return QUIZ.filter(function (q) { return st.quiz[q.id] === q.a; }).length; }
+  function quizAnswered() { return QUIZ.filter(function (q) { return st.quiz[q.id] !== undefined; }).length; }
+  function renderQBoard() {
+    $('#qBoard').innerHTML = QUIZ.map(function (q, i) {
+      var a = st.quiz[q.id], cls = a === undefined ? '' : (a === q.a ? 'right' : 'wrong');
+      if (i === qIdx) cls += ' current';
+      return '<li class="' + cls + '"><button type="button" data-q="' + i + '"><span class="b-dot"></span><span>' + q.name + '</span><span class="b-res">' + (a === undefined ? '' : q.big) + '</span></button></li>';
+    }).join('');
+    var n = quizAnswered();
+    $('#quizScore').textContent = n + ' of 6 answered' + (n ? ' · ' + quizRight() + ' right' : '');
+  }
+  function renderQ(animate) {
+    if (qIdx >= QUIZ.length) {
+      qCard.innerHTML = '<span class="label">All six answered</span><p class="qtext">' + quizRight() + ' of 6 right.</p>' +
+        '<p>Every number comes from the customer’s published case study. Open any company on the scoreboard to read its story.</p>' +
+        '<div class="actions"><button class="btn-primary" type="button" data-next="m4">Next mission</button></div>';
+      renderQBoard(); return;
+    }
+    var q = QUIZ[qIdx], a = st.quiz[q.id];
+    qCard.innerHTML = '<span class="qcount">Question ' + (qIdx + 1) + ' of 6</span><span class="qwho">' + q.who + '</span><p class="qtext">' + q.q + '</p>' +
+      '<div class="opts">' + q.opts.map(function (o, i) { return '<button class="opt" type="button" data-i="' + i + '">' + o + '</button>'; }).join('') + '</div>' +
+      '<div class="reveal" hidden><span class="big">' + q.big + '</span><p>' + q.note + ' <a href="' + q.url + '" target="_blank" rel="noopener">Read the story</a></p></div>' +
+      '<div class="actions" hidden><button class="btn-primary" type="button" data-qnext>' + (quizAnswered() >= QUIZ.length ? 'See your score' : 'Next question') + '</button></div>';
+    if (a !== undefined) markQ(a, false);
+    renderQBoard();
+    if (animate) fadeIn(qCard);
+  }
+  function markQ(pick, animate) {
+    var q = QUIZ[qIdx];
+    $$('.opt', qCard).forEach(function (b, i) { b.disabled = true; if (i === q.a) b.classList.add('right'); else if (i === pick) b.classList.add('wrong'); });
+    var rv = $('.reveal', qCard); rv.hidden = false;
+    if (animate) countUp($('.big', rv), q.big);
+    var act = $('.actions', qCard); act.hidden = false;
+    $('[data-qnext]', qCard).textContent = quizAnswered() >= QUIZ.length ? 'See your score' : 'Next question';
+  }
+  qCard.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (b && !b.disabled) {
+      var q = QUIZ[qIdx], pick = +b.dataset.i;
+      st.quiz[q.id] = pick; save();
+      markQ(pick, true);
+      if (pick === q.a) addXP(5); else toast('The real number is ' + q.big);
+      renderQBoard();
+      if (quizAnswered() === QUIZ.length && !st.done.m4) { addXP(10); complete('m4'); }
+      return;
+    }
+    if (e.target.closest('[data-qnext]')) {
+      var next = QUIZ.findIndex(function (x, i) { return i > qIdx && st.quiz[x.id] === undefined; });
+      if (next === -1) next = QUIZ.findIndex(function (x) { return st.quiz[x.id] === undefined; });
+      qIdx = next === -1 ? QUIZ.length : next;
+      renderQ(true);
+    }
+  });
+  $('#qBoard').addEventListener('click', function (e) { var b = e.target.closest('[data-q]'); if (b) { qIdx = +b.dataset.q; renderQ(true); } });
+  renderQ(false);
+
+  /* Mission 5: watch list */
+  var VIDS = [
+    { id: 'rum', art: 'RUM<br>demo', tone: 'a', title: 'Redefining frontend observability with Datadog RUM', src: 'Datadog · product demo', url: 'https://www.youtube.com/watch?v=JwPJ8M6NimQ', img: 'https://i.ytimg.com/vi/JwPJ8M6NimQ/hqdefault.jpg' },
+    { id: 'nyt', art: 'DASH<br>2026', tone: 'b', title: 'Beyond crash reports: real observability for mobile teams', src: 'DASH 2026 · The New York Times', url: 'https://dash.datadoghq.com/sessions/beyond-crash-reports-real-observability-for-mobile-teams/', img: '' },
+    { id: 'bits', art: 'Bits<br>AI SRE', tone: 'c', title: 'Introducing Bits AI SRE, your AI on-call teammate', src: 'Datadog · product intro', url: 'https://www.youtube.com/watch?v=UnYyAKYXeJE', img: 'https://i.ytimg.com/vi/UnYyAKYXeJE/hqdefault.jpg' },
+    { id: 'intro', art: 'RUM<br>101', tone: 'a', title: 'Introduction to RUM and Session Replay', src: 'Datadog · 33 min walkthrough', url: 'https://www.youtube.com/watch?v=OvTLPg0P75s', img: 'https://i.ytimg.com/vi/OvTLPg0P75s/hqdefault.jpg' }
+  ];
+  var watchEl = $('#watch');
+  watchEl.innerHTML = VIDS.map(function (v) {
+    var seen = st.watched.indexOf(v.id) !== -1;
+    return '<a class="vid' + (seen ? ' seen' : '') + '" data-id="' + v.id + '" href="' + v.url + '" target="_blank" rel="noopener">' +
+      '<span class="thumb"><span class="thumb-art tone-' + v.tone + '" aria-hidden="true">' + v.art + '</span>' + (v.img ? '<img src="' + v.img + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+      '<span class="play" aria-hidden="true"></span><span class="seen-tag">Opened</span></span>' +
+      '<span class="vmeta"><span class="vsrc">' + v.src + '</span><span class="vt">' + v.title + '</span></span></a>';
+  }).join('');
+  function updateWatch(silent) {
+    var n = st.watched.length;
+    $('#watchCount').textContent = n >= 2 ? 'Opened ' + n + ' of 4' : 'Opened ' + n + ' of 2';
+    if (n >= 2 && !st.done.m5 && !silent) { addXP(10); complete('m5'); }
+  }
+  watchEl.addEventListener('click', function (e) {
+    var a = e.target.closest('.vid'); if (!a) return;
+    var id = a.dataset.id;
+    if (st.watched.indexOf(id) === -1) { st.watched.push(id); save(); a.classList.add('seen'); addXP(5); updateWatch(false); }
+  });
+  updateWatch(true);
+
+  /* Mission 6: myth or fact, one claim at a time */
+  var MF = [
+    { short: 'Names and emails needed', claim: 'Datadog needs your users’ names and emails.', fact: false, why: 'It only knows what you pass in. A masked internal ID and a plan tier are enough to filter by customer segment.' },
+    { short: 'Flutter sees less than native', claim: 'The Flutter SDK sees less than the native SDKs.', fact: false, why: 'It runs on Datadog’s native iOS and Android SDKs, and adds Flutter build and raster timings on top.' },
+    { short: 'Trial next to LGTM', claim: 'You can trial Datadog next to LGTM without re-instrumenting.', fact: true, why: 'If your services send through an OpenTelemetry Collector, point it at both and compare side by side.' },
+    { short: 'Alert to fix PR', claim: 'An AI agent can turn an alert into a fix PR.', fact: true, why: 'Bits Code drafts a tested pull request from an alert or error, for a developer to review.' }
+  ];
+  var mfBox = $('#mf'), mfIdx = 0;
+  while (mfIdx < MF.length && st.mf[mfIdx] !== undefined) mfIdx++;
+  function mfAnswered() { return Object.keys(st.mf).length; }
+  function mfRight() { return MF.filter(function (m, i) { return st.mf[i] === m.fact; }).length; }
+  function renderMFBoard() {
+    $('#mfBoard').innerHTML = MF.map(function (m, i) {
+      var a = st.mf[i], cls = a === undefined ? '' : (a === m.fact ? 'right' : 'wrong');
+      if (i === mfIdx) cls += ' current';
+      return '<li class="' + cls + '"><button type="button" data-m="' + i + '"><span class="b-dot"></span><span>' + m.short + '</span><span class="b-res">' + (a === undefined ? '' : (m.fact ? 'Fact' : 'Myth')) + '</span></button></li>';
+    }).join('');
+    var n = mfAnswered();
+    $('#mfPill').textContent = n + ' of 4 answered' + (n ? ' · ' + mfRight() + ' right' : '');
+  }
+  function renderMF(animate) {
+    if (mfIdx >= MF.length) {
+      mfBox.innerHTML = '<span class="label">All four answered</span><p class="qtext claim">' + mfRight() + ' of 4 right.</p>' +
+        '<p>Bring the ones you want to go deeper on to the session on 18 November.</p>' +
+        '<div class="actions"><button class="btn-primary" type="button" data-next="m6">Next steps</button><button class="btn-secondary" type="button" data-mf-again>Play again</button></div>';
+      renderMFBoard(); if (animate) fadeIn(mfBox); return;
+    }
+    var m = MF[mfIdx], a = st.mf[mfIdx];
+    mfBox.innerHTML = '<span class="qcount">Claim ' + (mfIdx + 1) + ' of 4</span><p class="qtext claim">' + m.claim + '</p>' +
+      '<div class="opts two"><button class="opt" type="button" data-a="false">Myth</button><button class="opt" type="button" data-a="true">Fact</button></div>' +
+      '<p class="verdict" hidden></p>' +
+      '<div class="actions" hidden><button class="btn-primary" type="button" data-mf-next>Next claim</button></div>';
+    if (a !== undefined) markMF(a);
+    renderMFBoard();
+    if (animate) fadeIn(mfBox);
+  }
+  function markMF(pick) {
+    var m = MF[mfIdx], ok = pick === m.fact;
+    $$('.opt', mfBox).forEach(function (x) {
+      x.disabled = true;
+      var val = x.dataset.a === 'true';
+      if (val === m.fact) x.classList.add('right'); else if (val === pick) x.classList.add('wrong');
+    });
+    var v = $('.verdict', mfBox); v.hidden = false;
+    v.innerHTML = '<strong>' + (m.fact ? 'Fact.' : 'Myth.') + '</strong> ' + m.why;
+    $('.actions', mfBox).hidden = false;
+    $('[data-mf-next]', mfBox).textContent = mfAnswered() >= MF.length ? 'See your score' : 'Next claim';
+    return ok;
+  }
+  mfBox.addEventListener('click', function (e) {
+    var b = e.target.closest('.opt');
+    if (b && !b.disabled) {
+      var pick = b.dataset.a === 'true';
+      st.mf[mfIdx] = pick; save();
+      var ok = markMF(pick);
+      if (ok && !st.done.m6) addXP(5);
+      renderMFBoard();
+      if (mfAnswered() >= MF.length && !st.done.m6) complete('m6');
+      return;
+    }
+    if (e.target.closest('[data-mf-next]')) {
+      var next = -1;
+      for (var i = mfIdx + 1; i < MF.length; i++) if (st.mf[i] === undefined) { next = i; break; }
+      if (next === -1) for (i = 0; i < MF.length; i++) if (st.mf[i] === undefined) { next = i; break; }
+      mfIdx = next === -1 ? MF.length : next;
+      renderMF(true); return;
+    }
+    if (e.target.closest('[data-mf-again]')) { mfIdx = 0; st.mf = {}; save(); renderMF(true); }
+  });
+  $('#mfBoard').addEventListener('click', function (e) { var b = e.target.closest('[data-m]'); if (b) { mfIdx = +b.dataset.m; renderMF(true); } });
+  renderMF(false);
+
+  /* Plan: copy helpers */
+  function copyText(text, btn, done) {
+    var label = btn.textContent;
+    function ok() { btn.textContent = done; setTimeout(function () { btn.textContent = label; }, 1600); }
+    function fallback() {
+      var el = $('#addr'); var r = document.createRange(); r.selectNodeContents(el);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      if (text !== el.textContent) toast(text);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+  }
+  $('#copyAddr').addEventListener('click', function () { copyText('abhishek.gupta@datadoghq.com', this, 'Email copied'); });
+
+  /* Reset */
+  $$('[data-reset]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Tap again to reset'; setTimeout(function () { b.dataset.armed = ''; b.textContent = 'Reset progress'; }, 3000); return; }
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      location.reload();
+    });
+  });
+
+  /* Landing background: a live grid. Cells warm up, signals route along the lines, the pointer lights its neighbourhood. */
+  (function () {
+    var cv = document.getElementById('lSky'), land = document.getElementById('landing');
+    if (!cv || !cv.getContext) return;
+    var ctx = cv.getContext('2d');
+    var css = getComputedStyle(document.documentElement);
+    function tok(n, f) { var v = css.getPropertyValue(n).trim(); return v || f; }
+    function rgba(hex, a) {
+      var h = hex.replace('#', ''); if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+      var n = parseInt(h, 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+    }
+    var HI = tok('--span', '#7fd8ff'), SOFT = tok('--stage-muted', '#c0b3e3');
+    var G = 36, CW = 0, CH = 0, cols = 0, rows = 0, dpr = 1, last = 0;
+    var cells = [], pulses = [], nextCell = 0, nextPulse = 0, mx = -999, my = -999;
+    function r(a, b) { return a + Math.random() * (b - a); }
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      CW = cv.clientWidth || window.innerWidth; CH = cv.clientHeight || window.innerHeight;
+      cv.width = Math.round(CW * dpr); cv.height = Math.round(CH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cols = Math.ceil(CW / G) + 1; rows = Math.ceil(CH / G) + 1;
+    }
+    function weight() { return 0.8; }
+    function spawnCell(now) { cells.push({ c: (Math.random() * cols) | 0, r: (Math.random() * rows) | 0, born: now, life: r(1800, 4200), peak: r(0.05, 0.11) }); }
+    function spawnPulse(now) {
+      var horiz = Math.random() > 0.5, dir = Math.random() > 0.5 ? 1 : -1;
+      var x = horiz ? (dir > 0 ? 0 : cols * G) : ((Math.random() * cols) | 0) * G;
+      var y = horiz ? ((Math.random() * rows) | 0) * G : (dir > 0 ? 0 : rows * G);
+      pulses.push({ x: x, y: y, dx: horiz ? dir : 0, dy: horiz ? 0 : dir, speed: r(90, 150), trail: [], born: now, life: r(3500, 6500), turns: 0 });
+    }
+    function draw(now, dt) {
+      ctx.clearRect(0, 0, CW, CH);
+      cells = cells.filter(function (c) {
+        var p = (now - c.born) / c.life; if (p >= 1) return false;
+        ctx.fillStyle = rgba(HI, c.peak * Math.sin(Math.PI * p) * weight()); ctx.fillRect(c.c * G + 1, c.r * G + 1, G - 1, G - 1);
+        return true;
+      });
+      if (mx > -500) {
+        var c0 = Math.floor(mx / G), r0 = Math.floor(my / G);
+        for (var dc = -3; dc <= 3; dc++) for (var dr = -3; dr <= 3; dr++) {
+          var cx = (c0 + dc) * G + G / 2, cy = (r0 + dr) * G + G / 2;
+          var a = Math.max(0, 1 - Math.hypot(cx - mx, cy - my) / (G * 3.2)) * 0.09;
+          if (a > 0.004) { ctx.fillStyle = rgba(HI, a); ctx.fillRect((c0 + dc) * G + 1, (r0 + dr) * G + 1, G - 1, G - 1); }
+        }
+      }
+      pulses = pulses.filter(function (p) {
+        var age = now - p.born; if (age > p.life) return false;
+        var step = p.speed * dt / 1000, px = p.x, py = p.y;
+        p.x += p.dx * step; p.y += p.dy * step;
+        var crossed = (p.dx && Math.floor(px / G) !== Math.floor(p.x / G)) || (p.dy && Math.floor(py / G) !== Math.floor(p.y / G));
+        if (crossed && p.turns < 4 && Math.random() < 0.18) {
+          if (p.dx) { p.x = Math.round(p.x / G) * G; p.dy = Math.random() > 0.5 ? 1 : -1; p.dx = 0; }
+          else { p.y = Math.round(p.y / G) * G; p.dx = Math.random() > 0.5 ? 1 : -1; p.dy = 0; }
+          p.turns++;
+        }
+        p.trail.push([p.x, p.y]); if (p.trail.length > 26) p.trail.shift();
+        var fade = Math.min(1, (p.life - age) / 600, age / 300);
+        for (var i = 1; i < p.trail.length; i++) {
+          ctx.strokeStyle = rgba(HI, (i / p.trail.length) * 0.5 * fade); ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(p.trail[i - 1][0] + 0.5, p.trail[i - 1][1] + 0.5); ctx.lineTo(p.trail[i][0] + 0.5, p.trail[i][1] + 0.5); ctx.stroke();
+        }
+        ctx.fillStyle = rgba(HI, 0.8 * fade); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
+        return p.x > -G && p.x < CW + G && p.y > -G && p.y < CH + G;
+      });
+      if (mx > -500) {
+        ctx.fillStyle = rgba(SOFT, 0.12);
+        for (var a2 = -3; a2 <= 3; a2++) for (var b2 = -3; b2 <= 3; b2++) {
+          var nx = (Math.round(mx / G) + a2) * G, ny = (Math.round(my / G) + b2) * G;
+          if (Math.hypot(nx - mx, ny - my) < G * 3) ctx.fillRect(nx - 1, ny - 1, 2, 2);
+        }
+      }
+    }
+    function loop(now) {
+      if (land.hidden) return;
+      var dt = last ? Math.min(now - last, 50) : 16.7; last = now;
+      if (now > nextCell && cells.length < 18) { spawnCell(now); nextCell = now + r(140, 420); }
+      if (now > nextPulse && pulses.length < 5) { spawnPulse(now); nextPulse = now + r(700, 1600); }
+      draw(now, dt);
+      requestAnimationFrame(loop);
+    }
+    land.addEventListener('pointermove', function (e) { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } });
+    land.addEventListener('pointerleave', function () { mx = my = -999; });
+    resize();
+    window.addEventListener('resize', resize);
+    if (reduce) return;
+    requestAnimationFrame(loop);
+  })();
+
+  /* Start */
+  renderMeter();
+  var landing = $('#landing');
+  var started = MISSIONS.some(function (m) { return st.done[m]; }) || st.xp > 0;
+  if (started) $('#lStartLabel').textContent = 'Continue where you left off';
+  $$('#lMissions li').forEach(function (li) { li.classList.toggle('done', !!st.done[li.dataset.m]); });
+  var deepLink = location.hash.slice(1);
+  if (deepLink && document.getElementById(deepLink)) landing.hidden = true;
+  function enter(target) {
+    landing.classList.add('leaving');
+    setTimeout(function () {
+      landing.hidden = true; landing.classList.remove('leaving'); go(target);
+      var h = $('#' + target + ' h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+    }, reduce ? 0 : 340);
+  }
+  $('#lStart').addEventListener('click', function () { enter(MISSIONS.filter(function (m) { return !st.done[m]; })[0] || 'plan'); });
+  $('#lSkip').addEventListener('click', function () { enter('plan'); });
+  var startAt = location.hash.slice(1);
+  if (!startAt || !document.getElementById(startAt)) startAt = MISSIONS.filter(function (m) { return !st.done[m]; })[0] || 'plan';
+  go(startAt, true);
+})();
+</script>
+</body>
+</html>
