@@ -835,7 +835,7 @@ button.tl-row.ready { border-color: var(--warn); }
     $$('[data-go]').forEach(function (b) {
       if (b.dataset.go === id) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
-    try { history.replaceState(null, '', '#' + id); } catch (e) {}
+    if (!quiet) { try { history.replaceState(null, '', '#' + id); } catch (e) {} }
     var stage = $('#stage'); stage.scrollTop = 0;
     if (narrow()) {
       var chip = $('.mission[aria-current="page"]');
