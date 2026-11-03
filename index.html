@@ -318,6 +318,7 @@ button.tl-row.ready { border-color: var(--warn); }
 .qwho { font-family: var(--data); font-size: var(--t-mono); color: var(--stage-muted); }
 .qtext { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: var(--t-card); line-height: 1.25; text-wrap: balance; color: var(--stage-ink); }
 .claim { font-size: clamp(17px, min(1.6vw, 3.3vh), 23px); }
+.panel .qtext { color: var(--stage-ink); }
 .opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .opts.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .opt { padding: var(--s-2) 6px; border: 1px solid var(--stage-line); background: var(--stage); color: var(--stage-ink); font-family: var(--data); font-size: 15px; cursor: pointer; }
@@ -438,7 +439,9 @@ button.tl-row.ready { border-color: var(--warn); }
 @media (max-width: 860px) {
   html, body { height: auto; }
   body { display: block; }
-  .bar { gap: 10px 12px; flex-wrap: wrap; }
+  .bar { gap: 10px; flex-wrap: nowrap; min-height: 52px; }
+  .brand { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .plan-btn { flex: none; white-space: nowrap; }
   .console { display: block; }
   .rail { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--rule); padding: 8px max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); gap: 6px; scrollbar-width: none; }
   .rail::-webkit-scrollbar { display: none; }
@@ -452,10 +455,10 @@ button.tl-row.ready { border-color: var(--warn); }
   .scene-head { grid-template-columns: 1fr; }
   .pill { grid-column: 1; grid-row: auto; justify-self: start; }
   .split, .split.m1 { grid-template-columns: 1fr; grid-template-rows: none; height: auto; }
-  .phone { --ph: 420px; justify-self: center; }
-  .inv .panel { min-height: 300px; }
+  .phone { --ph: 340px; justify-self: center; }
+  .inv .panel { min-height: 0; }
   .relsvg { height: auto; max-height: none; }
-  .deck { height: 250px; flex: none; }
+  .deck { height: 236px; flex: none; }
   .watch { grid-template-columns: 1fr 1fr; }
   .mobile-foot { display: flex !important; }
   .landing { grid-template-columns: minmax(0, 1fr); gap: 24px; align-content: start; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -464,8 +467,11 @@ button.tl-row.ready { border-color: var(--warn); }
 }
 .mobile-foot { display: none; gap: 14px; padding: 0 16px 24px; max-width: 1180px; margin-inline: auto; }
 @media (max-width: 520px) {
-  .brand { font-size: 12.5px; }
-  .segs i { width: 10px; }
+  .bar { gap: 8px; padding-block: 6px; min-height: 48px; }
+  .brand { font-size: 13px; font-stretch: 100%; }
+  .meter, .medal-chip { display: none !important; }
+  .xp { margin-left: auto; }
+  .plan-btn { padding: 6px 10px; font-size: 12px; }
   .watch { grid-template-columns: 1fr; }
   .l-missions { grid-template-columns: 1fr; }
   .wf-scale, .span-row { grid-template-columns: minmax(0, 44%) minmax(0, 1fr) 42px; gap: 6px; }
@@ -1347,19 +1353,21 @@ button.tl-row.ready { border-color: var(--warn); }
   var started = MISSIONS.some(function (m) { return st.done[m]; }) || st.xp > 0;
   if (started) $('#lStartLabel').textContent = 'Continue where you left off';
   $$('#lMissions li').forEach(function (li) { li.classList.toggle('done', !!st.done[li.dataset.m]); });
-  var deepLink = location.hash.slice(1);
-  if (deepLink && document.getElementById(deepLink)) landing.hidden = true;
+  var entered = false;
+  try { entered = sessionStorage.getItem('pu-entered') === '1'; } catch (e) {}
+  if (entered) landing.hidden = true;
   function enter(target) {
+    try { sessionStorage.setItem('pu-entered', '1'); } catch (e) {}
     landing.classList.add('leaving');
     setTimeout(function () {
       landing.hidden = true; landing.classList.remove('leaving'); go(target);
       var h = $('#' + target + ' h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
     }, reduce ? 0 : 340);
   }
-  $('#lStart').addEventListener('click', function () { enter(MISSIONS.filter(function (m) { return !st.done[m]; })[0] || 'plan'); });
-  $('#lSkip').addEventListener('click', function () { enter('plan'); });
   var startAt = location.hash.slice(1);
   if (!startAt || !document.getElementById(startAt)) startAt = MISSIONS.filter(function (m) { return !st.done[m]; })[0] || 'plan';
+  $('#lStart').addEventListener('click', function () { enter(startAt); });
+  $('#lSkip').addEventListener('click', function () { enter('plan'); });
   go(startAt, true);
 })();
 </script>
